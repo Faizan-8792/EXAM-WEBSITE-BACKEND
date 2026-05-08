@@ -39,10 +39,9 @@ router.use((req, res, next) => {
 });
 
 const buildClientFingerprint = (req) => {
-  const ip = req.ip || req.socket?.remoteAddress || "unknown-ip";
   const userAgent = req.get("user-agent") || "unknown-agent";
   const clientId = sanitizeText(req.get("x-client-id"), 120);
-  return crypto.createHash("sha256").update(`${ip}|${userAgent}|${clientId}`).digest("hex");
+  return crypto.createHash("sha256").update(`${userAgent}|${clientId}`).digest("hex");
 };
 
 const shuffleValues = (items) => {
