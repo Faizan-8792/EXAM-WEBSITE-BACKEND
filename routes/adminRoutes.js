@@ -222,6 +222,22 @@ const getFrontendBaseUrl = (req) => {
   return `${req.protocol}://${req.get("host")}`;
 };
 
+const getParticipantExamStatus = (participant = {}) => {
+  if (participant.terminatedDueToViolation) {
+    return "Terminated";
+  }
+
+  if (participant.terminationReason) {
+    return "Left Exam";
+  }
+
+  if (participant.submitted) {
+    return "Submitted";
+  }
+
+  return "In Progress";
+};
+
 router.post("/login", loginLimiter, async (req, res) => {
   const email = sanitizeText(req.body.email, 150).toLowerCase();
   const password = String(req.body.password || "");
@@ -502,7 +518,12 @@ router.get("/participants", verifyAdmin, async (req, res, next) => {
       .sort({ date: -1 })
       .lean();
 
-    return res.json(participants);
+    return res.json(
+      participants.map((participant) => ({
+        ...participant,
+        examStatus: getParticipantExamStatus(participant)
+      }))
+    );
   } catch (error) {
     return next(error);
   }
@@ -526,6 +547,26 @@ router.get("/participants/export/excel", verifyAdmin, async (req, res, next) => 
     );
 
     return res.send(workbookBuffer);
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete("/participants/:id", verifyAdmin, async (req, res, next) => {
+  try {
+    const participantId = sanitizeText(req.params.id, 120);
+
+    if (!isValidObjectId(participantId)) {
+      return res.status(400).json({ message: "Invalid participant id" });
+    }
+
+    const deletedParticipant = await Participant.findByIdAndDelete(participantId);
+
+    if (!deletedParticipant) {
+      return res.status(404).json({ message: "Participant not found" });
+    }
+
+    return res.json({ message: "Participant deleted successfully" });
   } catch (error) {
     return next(error);
   }

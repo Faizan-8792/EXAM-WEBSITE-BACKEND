@@ -392,13 +392,15 @@ router.get("/state", async (req, res, next) => {
 
     const clientFingerprint = buildClientFingerprint(req);
 
-    const participant = await getParticipantSession(participantId, examToken, clientFingerprint, true);
+    const [participant, settings] = await Promise.all([
+      getParticipantSession(participantId, examToken, clientFingerprint, true),
+      Setting.getSingleton()
+    ]);
 
     if (!participant) {
       return res.status(401).json({ message: "Invalid exam session" });
     }
 
-    const settings = await Setting.getSingleton();
     const effectivePassingMarks = Math.min(settings.passingMarks, participant.totalQuestions || 0);
 
     if (participant.submitted) {
@@ -431,6 +433,8 @@ router.post("/submit", async (req, res, next) => {
     const participantId = sanitizeText(req.body.participantId, 120);
     const examToken = sanitizeText(req.body.token, 120);
     const submittedAnswers = req.body.answers && typeof req.body.answers === "object" ? req.body.answers : {};
+    const leftEarly = req.body.leftEarly === true;
+    const leaveReason = sanitizeText(req.body.reason, 300);
 
     if (!participantId || !examToken) {
       return res.status(400).json({ message: "participantId and token are required" });
@@ -438,13 +442,15 @@ router.post("/submit", async (req, res, next) => {
 
     const clientFingerprint = buildClientFingerprint(req);
 
-    const participant = await getParticipantSession(participantId, examToken, clientFingerprint, true);
+    const [participant, settings] = await Promise.all([
+      getParticipantSession(participantId, examToken, clientFingerprint, true),
+      Setting.getSingleton()
+    ]);
 
     if (!participant) {
       return res.status(401).json({ message: "Invalid exam session" });
     }
 
-    const settings = await Setting.getSingleton();
     const questionDocs = participant.assignedQuestions.filter(Boolean);
 
     if (!questionDocs.length) {
@@ -498,6 +504,11 @@ router.post("/submit", async (req, res, next) => {
     participant.answers = answers;
     participant.submitted = true;
     participant.submittedAt = new Date();
+
+    if (leftEarly) {
+      participant.terminationReason = leaveReason || "Participant left the exam before completing all questions";
+      participant.terminatedDueToViolation = false;
+    }
 
     if (passed && settings.showCertificateId && !participant.certificateId) {
       participant.certificateId = generateCertificateId();

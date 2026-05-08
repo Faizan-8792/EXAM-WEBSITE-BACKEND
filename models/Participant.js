@@ -323,6 +323,18 @@ const deleteMany = async () => {
   };
 };
 
+const findByIdAndDelete = async (id) => {
+  const rows = await supabaseRequest(TABLE, {
+    method: "DELETE",
+    query: {
+      id: `eq.${id}`
+    },
+    prefer: "return=representation"
+  });
+
+  return rows[0] ? new ParticipantDocument(rows[0]) : null;
+};
+
 module.exports = {
   create,
   findById,
@@ -330,5 +342,6 @@ module.exports = {
   countByExamLink,
   find,
   deleteMany,
+  findByIdAndDelete,
   RESULT_STATUS
 };
