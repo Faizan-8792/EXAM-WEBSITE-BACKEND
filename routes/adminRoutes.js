@@ -386,7 +386,7 @@ router.post("/exam-links", verifyAdmin, async (req, res, next) => {
       message: "Exam URL generated successfully",
       code: examLink.code,
       url: `${frontendBaseUrl}/exam-link/${encodeURIComponent(examLink.code)}`,
-      neverExpires: true,
+      neverExpires: false,
       expiresAt: examLink.expiresAt,
       expiresInMinutes: ExamLink.LINK_TTL_MINUTES
     });
@@ -416,11 +416,32 @@ router.get("/exam-links", verifyAdmin, async (req, res, next) => {
           active: Boolean(examLink.active),
           expired,
           status: examLink.active && !expired ? "Active" : "Expired",
-          neverExpires: true,
+          neverExpires: false,
           usedCount: usageCounts[examLink._id] || 0
         };
       })
     );
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete("/exam-links", verifyAdmin, async (req, res, next) => {
+  try {
+    const confirmationText = sanitizeText(req.body.confirmationText, 80);
+
+    if (confirmationText !== "CLEAR_LINKS") {
+      return res.status(400).json({
+        message: "Invalid confirmation text"
+      });
+    }
+
+    const result = await ExamLink.deleteMany();
+
+    return res.json({
+      message: "All link history cleared successfully",
+      deletedCount: result.deletedCount || 0
+    });
   } catch (error) {
     return next(error);
   }
@@ -486,6 +507,27 @@ router.put("/questions/:id", verifyAdmin, async (req, res, next) => {
     return res.json({
       message: "Question updated successfully",
       question: updatedQuestion
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete("/questions", verifyAdmin, async (req, res, next) => {
+  try {
+    const confirmationText = sanitizeText(req.body.confirmationText, 80);
+
+    if (confirmationText !== "CLEAR_QUESTIONS") {
+      return res.status(400).json({
+        message: "Invalid confirmation text"
+      });
+    }
+
+    const result = await Question.deleteMany();
+
+    return res.json({
+      message: "All questions cleared successfully",
+      deletedCount: result.deletedCount || 0
     });
   } catch (error) {
     return next(error);

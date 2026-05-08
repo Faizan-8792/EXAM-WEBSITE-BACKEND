@@ -2,8 +2,7 @@ const crypto = require("crypto");
 const { supabaseRequest } = require("../utils/supabaseClient");
 
 const TABLE = "exam_links";
-const LINK_TTL_MINUTES = null;
-const LINK_EXPIRY_YEARS = 100;
+const LINK_TTL_MINUTES = 90;
 
 const generateCode = () => {
   const randomPart = crypto.randomBytes(6).toString("hex").toUpperCase();
@@ -36,11 +35,17 @@ const mapExamLinkFromDb = (row = {}) => ({
   updatedAt: row.updated_at
 });
 
-const isExpired = () => false;
+const isExpired = (examLink = {}) => {
+  if (!examLink.expiresAt) {
+    return true;
+  }
+
+  return new Date(examLink.expiresAt).getTime() <= Date.now();
+};
 
 const create = async ({ createdByEmail = "" } = {}) => {
   const expiresAt = new Date();
-  expiresAt.setFullYear(expiresAt.getFullYear() + LINK_EXPIRY_YEARS);
+  expiresAt.setMinutes(expiresAt.getMinutes() + LINK_TTL_MINUTES);
 
   const rows = await supabaseRequest(TABLE, {
     method: "POST",
@@ -86,12 +91,26 @@ const findAll = async () => {
   return Array.isArray(rows) ? rows.map(mapExamLinkFromDb) : [];
 };
 
+const deleteMany = async () => {
+  const rows = await supabaseRequest(TABLE, {
+    method: "DELETE",
+    query: {
+      id: "not.is.null"
+    },
+    prefer: "return=representation"
+  });
+
+  return {
+    deletedCount: Array.isArray(rows) ? rows.length : 0
+  };
+};
+
 module.exports = {
   LINK_TTL_MINUTES,
-  LINK_EXPIRY_YEARS,
   normalizeCode,
   isExpired,
   create,
   findByCode,
-  findAll
+  findAll,
+  deleteMany
 };

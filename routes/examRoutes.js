@@ -236,7 +236,7 @@ router.get("/link/:code", async (req, res, next) => {
     return res.json({
       valid: !expired,
       expired,
-      neverExpires: true,
+      neverExpires: false,
       code: examLink.code,
       expiresAt: examLink.expiresAt
     });

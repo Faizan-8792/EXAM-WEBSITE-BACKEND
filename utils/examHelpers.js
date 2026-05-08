@@ -1,7 +1,7 @@
 const crypto = require("crypto");
 const { RESULT_STATUS } = require("./constants");
 
-const FAIL_NOTICE = "You will recieve the further notice from Central Office";
+const FAIL_NOTICE = "You will be notified by Central Office.";
 
 const generateExamToken = () => crypto.randomBytes(24).toString("hex");
 

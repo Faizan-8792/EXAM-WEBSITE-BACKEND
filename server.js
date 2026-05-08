@@ -3,7 +3,7 @@ require("dotenv").config();
 const app = require("./app");
 const { connectDb } = require("./utils/db");
 const PORT = Number(process.env.PORT) || 5000;
-const PUBLIC_BACKEND_URL = String(process.env.BACKEND_PUBLIC_URL || "https://exam-website-backend.onrender.com")
+const PUBLIC_BACKEND_URL = String(process.env.BACKEND_PUBLIC_URL || "https://backendexamwebsite.azurewebsites.net")
   .trim()
   .replace(/\/+$/, "");
 

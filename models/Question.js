@@ -166,6 +166,20 @@ const findByIdAndDelete = async (id) => {
   return rows[0] ? mapQuestionFromDb(rows[0]) : null;
 };
 
+const deleteMany = async () => {
+  const rows = await supabaseRequest(TABLE, {
+    method: "DELETE",
+    query: {
+      id: "not.is.null"
+    },
+    prefer: "return=representation"
+  });
+
+  return {
+    deletedCount: Array.isArray(rows) ? rows.length : 0
+  };
+};
+
 module.exports = {
   QUESTION_TYPES,
   find,
@@ -174,5 +188,6 @@ module.exports = {
   aggregate,
   create,
   findByIdAndUpdate,
-  findByIdAndDelete
+  findByIdAndDelete,
+  deleteMany
 };
