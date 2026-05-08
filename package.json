@@ -1,0 +1,33 @@
+{
+  "name": "narayana-ai-robotics-exam-system",
+  "version": "1.0.0",
+  "description": "Full-stack examination platform for Narayana Group of Schools AI & Robotics assessments",
+  "main": "server.js",
+  "scripts": {
+    "predev": "bash -c 'if [ ! -d node_modules ]; then npm install; fi'",
+    "predev:both": "bash -c 'if [ ! -d node_modules ]; then npm install; fi'",
+    "start": "node server.js",
+    "dev": "bash -c 'if [ \"$1\" = \"both\" ]; then npm run dev:both; else npm run dev:backend; fi' --",
+    "dev:backend": "node server.js",
+    "dev:watch": "nodemon server.js",
+    "dev:frontend": "node scripts/serveFrontend.js",
+    "dev:both": "node scripts/devBothClean.js",
+    "both": "npm run dev:both"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "jsonwebtoken": "^9.0.2",
+    "puppeteer": "^24.8.2",
+    "sanitize-html": "^2.13.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
