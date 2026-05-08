@@ -208,11 +208,7 @@ const getParticipantSession = async (participantId, examToken, clientFingerprint
     return null;
   }
 
-  if (participant.clientFingerprint && participant.clientFingerprint !== clientFingerprint) {
-    return null;
-  }
-
-  if (!participant.clientFingerprint) {
+  if (participant.clientFingerprint !== clientFingerprint) {
     participant.clientFingerprint = clientFingerprint;
     await participant.save();
   }
