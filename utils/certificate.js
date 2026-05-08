@@ -190,6 +190,18 @@ const drawCenteredPdfText = (text, y, font, fontSize, color = "0 0 0") => {
   ].join("\n");
 };
 
+const drawPdfText = (text, x, y, font, fontSize, color = "0 0 0") => {
+  const safeText = sanitizePdfText(text, 200);
+  return [
+    "BT",
+    `/${font} ${fontSize} Tf`,
+    `${color} rg`,
+    `1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm`,
+    `${toPdfText(safeText)} Tj`,
+    "ET"
+  ].join("\n");
+};
+
 const buildPdf = (content) => {
   const streamLength = Buffer.byteLength(content, "utf8");
   const objects = [
@@ -248,9 +260,10 @@ const generateFallbackCertificatePdf = ({
     drawCenteredPdfText("for successfully completing", 292, "F3", 20, "0.15 0.15 0.15"),
     drawCenteredPdfText(examName, 252, "F2", 24, "0.05 0.28 0.55"),
     drawCenteredPdfText(`Branch: ${branch}`, 206, "F1", 18, "0.15 0.15 0.15"),
-    drawCenteredPdfText(`Completed On: ${date}`, 174, "F1", 16, "0.15 0.15 0.15"),
-    certificateIdText ? drawCenteredPdfText(certificateIdText, 142, "F1", 14, "0.15 0.15 0.15") : "",
-    drawCenteredPdfText(`Academic Year ${getAcademicYear(date)}`, 112, "F1", 14, "0.15 0.15 0.15"),
+    certificateIdText ? drawCenteredPdfText(certificateIdText, 166, "F1", 14, "0.15 0.15 0.15") : "",
+    drawCenteredPdfText(`Academic Year ${getAcademicYear(date)}`, 138, "F1", 14, "0.15 0.15 0.15"),
+    drawPdfText("Date of Issue", 116, 92, "F1", 13, "0.05 0.28 0.55"),
+    drawPdfText(date, 128, 72, "F3", 13, "0.15 0.15 0.15"),
     "0.05 0.28 0.55 RG",
     "1 w",
     "586 96 160 0 l S",

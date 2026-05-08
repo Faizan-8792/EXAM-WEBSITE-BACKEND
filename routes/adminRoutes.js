@@ -370,6 +370,7 @@ router.post("/exam-links", verifyAdmin, async (req, res, next) => {
       message: "Exam URL generated successfully",
       code: examLink.code,
       url: `${frontendBaseUrl}/exam-link/${encodeURIComponent(examLink.code)}`,
+      neverExpires: true,
       expiresAt: examLink.expiresAt,
       expiresInMinutes: ExamLink.LINK_TTL_MINUTES
     });

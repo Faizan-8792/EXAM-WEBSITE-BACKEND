@@ -2,7 +2,8 @@ const crypto = require("crypto");
 const { supabaseRequest } = require("../utils/supabaseClient");
 
 const TABLE = "exam_links";
-const LINK_TTL_MINUTES = 90;
+const LINK_TTL_MINUTES = null;
+const LINK_EXPIRY_YEARS = 100;
 
 const generateCode = () => {
   const randomPart = crypto.randomBytes(6).toString("hex").toUpperCase();
@@ -35,10 +36,11 @@ const mapExamLinkFromDb = (row = {}) => ({
   updatedAt: row.updated_at
 });
 
-const isExpired = (examLink) => !examLink?.expiresAt || new Date(examLink.expiresAt).getTime() <= Date.now();
+const isExpired = () => false;
 
 const create = async ({ createdByEmail = "" } = {}) => {
-  const expiresAt = new Date(Date.now() + LINK_TTL_MINUTES * 60 * 1000);
+  const expiresAt = new Date();
+  expiresAt.setFullYear(expiresAt.getFullYear() + LINK_EXPIRY_YEARS);
 
   const rows = await supabaseRequest(TABLE, {
     method: "POST",
@@ -75,6 +77,7 @@ const findByCode = async (code) => {
 
 module.exports = {
   LINK_TTL_MINUTES,
+  LINK_EXPIRY_YEARS,
   normalizeCode,
   isExpired,
   create,

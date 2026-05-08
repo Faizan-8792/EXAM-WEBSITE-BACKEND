@@ -72,6 +72,12 @@ const normalizeIdentityPart = (value) =>
 const buildAttemptKey = (examLinkId, payload) =>
   crypto
     .createHash("sha256")
+    .update([examLinkId, normalizeIdentityPart(payload.identity)].join("|"))
+    .digest("hex");
+
+const buildLegacyAttemptKey = (examLinkId, payload) =>
+  crypto
+    .createHash("sha256")
     .update([examLinkId, normalizeIdentityPart(payload.identity), normalizeIdentityPart(payload.name)].join("|"))
     .digest("hex");
 
@@ -230,6 +236,7 @@ router.get("/link/:code", async (req, res, next) => {
     return res.json({
       valid: !expired,
       expired,
+      neverExpires: true,
       code: examLink.code,
       expiresAt: examLink.expiresAt
     });
@@ -263,8 +270,16 @@ router.post("/start", async (req, res, next) => {
     const settings = await Setting.getSingleton();
     const clientFingerprint = buildClientFingerprint(req);
     const attemptKey = buildAttemptKey(examLink._id, payload);
+    const legacyAttemptKey = buildLegacyAttemptKey(examLink._id, payload);
 
-    const existingForDetails = await Participant.findLatestByExamLinkAndAttemptKey(examLink._id, attemptKey);
+    let existingForDetails = await Participant.findLatestByExamLinkAndAttemptKey(examLink._id, attemptKey);
+
+    if (!existingForDetails && legacyAttemptKey !== attemptKey) {
+      existingForDetails = await Participant.findLatestByExamLinkAndAttemptKey(examLink._id, legacyAttemptKey);
+      if (existingForDetails) {
+        existingForDetails.attemptKey = attemptKey;
+      }
+    }
 
     if (existingForDetails?.submitted) {
       existingForDetails.clientFingerprint = clientFingerprint;
@@ -613,19 +628,31 @@ router.get("/certificate/:participantId", async (req, res, next) => {
     const settings = await Setting.getSingleton();
     const shouldShowCertificateId = settings.showCertificateId !== false;
 
+    let shouldSaveParticipant = false;
+
     if (shouldShowCertificateId && !participant.certificateId) {
       participant.certificateId = generateCertificateId();
       participant.certificateIssuedAt = new Date();
+      shouldSaveParticipant = true;
+    }
+
+    if (!participant.certificateIssuedAt) {
+      participant.certificateIssuedAt = new Date();
+      shouldSaveParticipant = true;
+    }
+
+    if (shouldSaveParticipant) {
       await participant.save();
     }
 
     const visibleCertificateId = shouldShowCertificateId ? participant.certificateId || "" : "";
+    const certificateIssueDate = participant.certificateIssuedAt || participant.submittedAt || participant.date;
 
     const certificatePdf = await generateCertificatePdf({
       name: participant.name,
       branch: participant.branch,
       examName: participant.courseName || COURSE_NAME,
-      date: new Date(participant.submittedAt || participant.date).toLocaleDateString("en-IN"),
+      date: new Date(certificateIssueDate).toLocaleDateString("en-IN"),
       certificateId: visibleCertificateId,
       showCertificateId: shouldShowCertificateId
     });

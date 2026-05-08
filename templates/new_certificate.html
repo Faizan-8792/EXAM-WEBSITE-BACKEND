@@ -183,9 +183,9 @@
     display: flex;
     justify-content: space-between;
     width: 100%;
-    margin-top: 18px;
+    margin-top: 16px;
     padding: 0 20px;
-    align-items: flex-start;
+    align-items: flex-end;
   }
 
   .sig-block {
@@ -194,16 +194,46 @@
     align-items: center;
     gap: 0;
     min-width: 160px;
+    min-height: 82px;
+    justify-content: flex-end;
   }
 
   .signature-img {
     width: 130px;
-    height: 46px;
+    height: 54px;
     object-fit: contain;
-    margin-bottom: 2px;
+    margin-bottom: 0;
   }
 
   .sig-line { width: 140px; height: 1px; background: #017eb9; margin-bottom: 4px; }
+
+  .date-issue {
+    font-family: 'Crimson Text', serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a1a;
+    min-height: 54px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 0;
+  }
+
+  .date-label {
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: #017eb9;
+    text-transform: uppercase;
+  }
+
+  .date-value {
+    font-family: 'Crimson Text', serif;
+    font-size: 13px;
+    font-style: italic;
+    color: #888;
+  }
 
   .sig-name {
     font-family: 'Cinzel', serif;
@@ -376,9 +406,10 @@
       <!-- Signature row -->
       <div class="sig-row">
         <div class="sig-block">
-          <div class="sig-line"></div>
-          <div class="sig-name">Date of Issue</div>
-          <div class="sig-title">{{DATE}}</div>
+          <div class="date-issue">
+            <div class="date-label">Date of Issue</div>
+            <div class="date-value">{{DATE}}</div>
+          </div>
         </div>
 
         <div class="sig-block">
