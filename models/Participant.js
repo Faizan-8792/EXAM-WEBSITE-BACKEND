@@ -277,6 +277,24 @@ const findLatestByExamLinkAndAttemptKey = (examLinkId, attemptKey) =>
     })
   );
 
+const countByExamLink = async () => {
+  const rows = await supabaseRequest(TABLE, {
+    query: {
+      select: "exam_link_id"
+    }
+  });
+
+  return (Array.isArray(rows) ? rows : []).reduce((counts, row) => {
+    const examLinkId = row.exam_link_id;
+
+    if (examLinkId) {
+      counts[examLinkId] = (counts[examLinkId] || 0) + 1;
+    }
+
+    return counts;
+  }, {});
+};
+
 const find = (filter = {}, projection = "") =>
   new ParticipantQuery(
     () =>
@@ -309,6 +327,7 @@ module.exports = {
   create,
   findById,
   findLatestByExamLinkAndAttemptKey,
+  countByExamLink,
   find,
   deleteMany,
   RESULT_STATUS

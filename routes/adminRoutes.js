@@ -379,6 +379,37 @@ router.post("/exam-links", verifyAdmin, async (req, res, next) => {
   }
 });
 
+router.get("/exam-links", verifyAdmin, async (req, res, next) => {
+  try {
+    const [examLinks, usageCounts] = await Promise.all([
+      ExamLink.findAll(),
+      Participant.countByExamLink()
+    ]);
+    const frontendBaseUrl = getFrontendBaseUrl(req);
+
+    return res.json(
+      examLinks.map((examLink) => {
+        const expired = ExamLink.isExpired(examLink);
+
+        return {
+          id: examLink._id,
+          code: examLink.code,
+          url: `${frontendBaseUrl}/exam-link/${encodeURIComponent(examLink.code)}`,
+          createdAt: examLink.createdAt,
+          expiresAt: examLink.expiresAt,
+          active: Boolean(examLink.active),
+          expired,
+          status: examLink.active && !expired ? "Active" : "Expired",
+          neverExpires: true,
+          usedCount: usageCounts[examLink._id] || 0
+        };
+      })
+    );
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get("/questions", verifyAdmin, async (req, res, next) => {
   try {
     const questions = await Question.find().sort({ createdAt: -1 });

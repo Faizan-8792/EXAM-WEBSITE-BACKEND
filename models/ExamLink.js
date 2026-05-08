@@ -75,11 +75,23 @@ const findByCode = async (code) => {
   return rows[0] ? mapExamLinkFromDb(rows[0]) : null;
 };
 
+const findAll = async () => {
+  const rows = await supabaseRequest(TABLE, {
+    query: {
+      select: "*",
+      order: "created_at.desc"
+    }
+  });
+
+  return Array.isArray(rows) ? rows.map(mapExamLinkFromDb) : [];
+};
+
 module.exports = {
   LINK_TTL_MINUTES,
   LINK_EXPIRY_YEARS,
   normalizeCode,
   isExpired,
   create,
-  findByCode
+  findByCode,
+  findAll
 };
