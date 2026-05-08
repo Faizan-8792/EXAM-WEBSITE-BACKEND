@@ -4,6 +4,7 @@
   "description": "Full-stack examination platform for Narayana Group of Schools AI & Robotics assessments",
   "main": "server.js",
   "scripts": {
+    "postinstall": "node scripts/installPuppeteerChrome.js",
     "predev": "bash -c 'if [ ! -d node_modules ]; then npm install; fi'",
     "predev:both": "bash -c 'if [ ! -d node_modules ]; then npm install; fi'",
     "start": "node server.js",
