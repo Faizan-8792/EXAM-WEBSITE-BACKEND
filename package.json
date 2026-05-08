@@ -14,6 +14,9 @@
     "dev:both": "node scripts/devBothClean.js",
     "both": "npm run dev:both"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",

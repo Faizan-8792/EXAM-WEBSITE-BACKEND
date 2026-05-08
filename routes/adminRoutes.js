@@ -18,12 +18,10 @@ const { buildParticipantsWorkbook } = require("../utils/excelExport");
 
 const router = express.Router();
 
-const parseAllowedOrigins = () => {
-  const rawOrigins = process.env.ALLOWED_ORIGINS || process.env.FRONTEND_ORIGIN || "";
+const DEFAULT_ALLOWED_ORIGINS = ["https://narayanagroupexamportal.netlify.app"];
 
-  if (!rawOrigins && process.env.NODE_ENV !== "production") {
-    return ["http://localhost:5500", "http://127.0.0.1:5500", "http://localhost:3000"];
-  }
+const parseAllowedOrigins = () => {
+  const rawOrigins = process.env.ALLOWED_ORIGINS || process.env.FRONTEND_ORIGIN || DEFAULT_ALLOWED_ORIGINS.join(",");
 
   return rawOrigins
     .split(",")
