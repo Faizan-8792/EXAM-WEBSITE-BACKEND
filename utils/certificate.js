@@ -1,5 +1,8 @@
 const fs = require("fs");
 const path = require("path");
+
+process.env.PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.join(__dirname, "..", ".cache", "puppeteer");
+
 const puppeteer = require("puppeteer");
 
 const logoCandidates = [
@@ -28,6 +31,13 @@ const maxConcurrentPdfJobs = Math.max(1, Math.min(3, Number(process.env.PDF_CONC
 const browserExecutableCandidates = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
   process.env.CHROME_PATH,
+  process.env.GOOGLE_CHROME_BIN,
+  process.env.CHROMIUM_BIN,
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+  "/usr/bin/microsoft-edge",
   path.join(process.env.PROGRAMFILES || "", "Google", "Chrome", "Application", "chrome.exe"),
   path.join(process.env["PROGRAMFILES(X86)"] || "", "Google", "Chrome", "Application", "chrome.exe"),
   path.join(process.env.LOCALAPPDATA || "", "Google", "Chrome", "Application", "chrome.exe"),
@@ -36,8 +46,19 @@ const browserExecutableCandidates = [
   path.join(process.env.LOCALAPPDATA || "", "Microsoft", "Edge", "Application", "msedge.exe")
 ].filter(Boolean);
 
+const getBundledBrowserExecutablePath = () => {
+  try {
+    return puppeteer.executablePath();
+  } catch (error) {
+    return "";
+  }
+};
+
 const getBrowserExecutablePath = () =>
-  browserExecutableCandidates.find((candidatePath) => fs.existsSync(candidatePath));
+  [
+    getBundledBrowserExecutablePath(),
+    ...browserExecutableCandidates
+  ].find((candidatePath) => candidatePath && fs.existsSync(candidatePath));
 
 const getPuppeteerLaunchOptions = () => {
   const executablePath = getBrowserExecutablePath();
@@ -96,7 +117,7 @@ const getBrowser = () => {
         browserPromise = null;
         if (/could not find chrome/i.test(error.message || "")) {
           throw new Error(
-            "Could not find Chrome or Edge for certificate generation. Run: npm.cmd exec puppeteer browsers install chrome"
+            "Could not find Chrome for certificate generation. Redeploy the backend so postinstall can run: npm exec puppeteer browsers install chrome"
           );
         }
         throw error;

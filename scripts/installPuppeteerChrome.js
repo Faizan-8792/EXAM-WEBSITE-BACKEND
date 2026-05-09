@@ -12,5 +12,6 @@ try {
     }
   });
 } catch (error) {
-  console.warn(`Chrome installation skipped. Certificate generation requires browser PDF rendering. ${error.message}`);
+  console.error(`Chrome installation failed. Certificate generation requires browser PDF rendering. ${error.message}`);
+  process.exitCode = 1;
 }
