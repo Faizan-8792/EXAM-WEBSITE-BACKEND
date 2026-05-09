@@ -155,125 +155,6 @@ const getAcademicYear = (dateValue) => {
   return `${startYear}-${String(startYear + 1).slice(-2)}`;
 };
 
-const toPdfText = (value) => {
-  const utf16le = Buffer.from(`\ufeff${String(value || "")}`, "utf16le");
-  const utf16be = Buffer.alloc(utf16le.length);
-
-  for (let index = 0; index < utf16le.length; index += 2) {
-    utf16be[index] = utf16le[index + 1];
-    utf16be[index + 1] = utf16le[index];
-  }
-
-  return `<${utf16be.toString("hex").toUpperCase()}>`;
-};
-
-const sanitizePdfText = (value, maxLength = 120) =>
-  String(value || "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLength);
-
-const getApproxTextX = (text, fontSize) => {
-  const width = sanitizePdfText(text, 200).length * fontSize * 0.48;
-  return Math.max(60, (841.89 - width) / 2);
-};
-
-const drawCenteredPdfText = (text, y, font, fontSize, color = "0 0 0") => {
-  const safeText = sanitizePdfText(text, 200);
-  return [
-    "BT",
-    `/${font} ${fontSize} Tf`,
-    `${color} rg`,
-    `1 0 0 1 ${getApproxTextX(safeText, fontSize).toFixed(2)} ${y.toFixed(2)} Tm`,
-    `${toPdfText(safeText)} Tj`,
-    "ET"
-  ].join("\n");
-};
-
-const drawPdfText = (text, x, y, font, fontSize, color = "0 0 0") => {
-  const safeText = sanitizePdfText(text, 200);
-  return [
-    "BT",
-    `/${font} ${fontSize} Tf`,
-    `${color} rg`,
-    `1 0 0 1 ${x.toFixed(2)} ${y.toFixed(2)} Tm`,
-    `${toPdfText(safeText)} Tj`,
-    "ET"
-  ].join("\n");
-};
-
-const buildPdf = (content) => {
-  const streamLength = Buffer.byteLength(content, "utf8");
-  const objects = [
-    "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 841.89 595.28] /Resources << /Font << /F1 5 0 R /F2 6 0 R /F3 7 0 R >> >> /Contents 4 0 R >>",
-    `<< /Length ${streamLength} >>\nstream\n${content}\nendstream`,
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman >>"
-  ];
-  const chunks = ["%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n"];
-  const offsets = [0];
-  let currentLength = Buffer.byteLength(chunks[0], "binary");
-
-  objects.forEach((object, index) => {
-    offsets.push(currentLength);
-    const chunk = `${index + 1} 0 obj\n${object}\nendobj\n`;
-    chunks.push(chunk);
-    currentLength += Buffer.byteLength(chunk, "binary");
-  });
-
-  const xrefOffset = currentLength;
-  const xrefRows = offsets
-    .map((offset, index) => index === 0 ? "0000000000 65535 f " : `${String(offset).padStart(10, "0")} 00000 n `)
-    .join("\n");
-  chunks.push(
-    `xref\n0 ${objects.length + 1}\n${xrefRows}\ntrailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`
-  );
-
-  return Buffer.from(chunks.join(""), "binary");
-};
-
-const generateFallbackCertificatePdf = ({
-  name,
-  branch,
-  examName,
-  date,
-  certificateId,
-  showCertificateId = true
-}) => {
-  const certificateIdText = showCertificateId && certificateId ? `Certificate No: ${certificateId}` : "";
-  const content = [
-    "q",
-    "0.98 0.99 1 rg",
-    "0 0 841.89 595.28 re f",
-    "0.05 0.28 0.55 RG",
-    "6 w",
-    "36 36 769.89 523.28 re S",
-    "0.86 0.66 0.22 RG",
-    "2 w",
-    "54 54 733.89 487.28 re S",
-    drawCenteredPdfText("Certificate of Achievement", 468, "F2", 42, "0.05 0.28 0.55"),
-    drawCenteredPdfText("This certificate is proudly presented to", 406, "F3", 20, "0.15 0.15 0.15"),
-    drawCenteredPdfText(name, 346, "F2", 38, "0.05 0.28 0.55"),
-    drawCenteredPdfText("for successfully completing", 292, "F3", 20, "0.15 0.15 0.15"),
-    drawCenteredPdfText(examName, 252, "F2", 24, "0.05 0.28 0.55"),
-    drawCenteredPdfText(`Branch: ${branch}`, 206, "F1", 18, "0.15 0.15 0.15"),
-    certificateIdText ? drawCenteredPdfText(certificateIdText, 166, "F1", 14, "0.15 0.15 0.15") : "",
-    drawCenteredPdfText(`Academic Year ${getAcademicYear(date)}`, 138, "F1", 14, "0.15 0.15 0.15"),
-    drawPdfText(date, 128, 92, "F3", 13, "0.15 0.15 0.15"),
-    drawPdfText("Date of Issue", 116, 72, "F1", 13, "0.05 0.28 0.55"),
-    "0.05 0.28 0.55 RG",
-    "1 w",
-    "586 96 160 0 l S",
-    drawCenteredPdfText("Authorized Signature", 72, "F1", 12, "0.15 0.15 0.15"),
-    "Q"
-  ].filter(Boolean).join("\n");
-
-  return buildPdf(content);
-};
-
 const wrapTemplate = (markup) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -288,29 +169,6 @@ const wrapTemplate = (markup) => `
 </html>
 `;
 
-const buildFallbackTemplate = ({ name, examName, branch, date, certificateId, showCertificateId }) => `
-<style>
-  @page { size: A4 landscape; margin: 0; }
-  body { margin: 0; font-family: Georgia, serif; background: #f5f8fc; }
-  .box { margin: 24px; border: 6px solid #0d5baa; padding: 36px; text-align: center; background: #fff; }
-  .title { font-size: 40px; color: #0d5baa; margin-bottom: 14px; }
-  .name { font-size: 36px; margin: 18px 0; }
-  .text { font-size: 20px; }
-  .meta { margin-top: 24px; font-size: 16px; color: #444; }
-</style>
-<div class="box">
-  <div class="title">Certificate of Achievement</div>
-  <div class="text">This certificate is proudly presented to</div>
-  <div class="name">${escapeHtml(name)}</div>
-  <div class="text">
-    for successfully completing the <strong>${escapeHtml(examName)}</strong> from
-    <strong>${escapeHtml(branch)}</strong>.
-  </div>
-  <div class="meta">Completed On: ${escapeHtml(date)}</div>
-  ${showCertificateId ? `<div class="meta">Certificate No: ${escapeHtml(certificateId)}</div>` : ""}
-</div>
-`;
-
 const buildCertificateHtml = ({
   name,
   branch,
@@ -320,16 +178,7 @@ const buildCertificateHtml = ({
   showCertificateId = true
 }) => {
   if (!certificateTemplate) {
-    return wrapTemplate(
-      buildFallbackTemplate({
-        name,
-        branch,
-        examName,
-        date,
-        certificateId,
-        showCertificateId
-      })
-    );
+    throw new Error("Certificate template is missing. Please ensure backend/templates/new_certificate.html exists.");
   }
 
   const logoSrc = logoBase64 ? `data:${logoMimeType};base64,${logoBase64}` : "";
@@ -383,14 +232,7 @@ const generateBrowserCertificatePdf = async (certificateData) => {
   }
 };
 
-const generateCertificatePdf = (certificateData) => runPdfJob(async () => {
-  try {
-    return await generateBrowserCertificatePdf(certificateData);
-  } catch (error) {
-    console.error("Certificate browser PDF generation failed; using fallback PDF.", error);
-    return generateFallbackCertificatePdf(certificateData);
-  }
-});
+const generateCertificatePdf = (certificateData) => runPdfJob(() => generateBrowserCertificatePdf(certificateData));
 
 process.on("SIGINT", () => {
   closeBrowser();

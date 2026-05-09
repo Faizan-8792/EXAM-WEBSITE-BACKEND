@@ -12,5 +12,5 @@ try {
     }
   });
 } catch (error) {
-  console.warn(`Chrome installation skipped. Certificate fallback PDF will be used if browser PDF generation is unavailable. ${error.message}`);
+  console.warn(`Chrome installation skipped. Certificate generation requires browser PDF rendering. ${error.message}`);
 }
