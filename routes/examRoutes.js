@@ -19,7 +19,6 @@ const {
 const { generateCertificatePdf } = require("../utils/certificate");
 
 const router = express.Router();
-const MAX_TAB_SWITCH_WARNINGS = 4;
 const COMPLETED_ATTEMPT_MESSAGE = "You have already completed this exam. Re-appear is not allowed.";
 
 const examRequestLimiter = rateLimit({
@@ -519,65 +518,6 @@ router.post("/submit", async (req, res, next) => {
 
     return res.json({
       message: "Exam submitted successfully",
-      ...buildResultPayload(participant, effectivePassingMarks, settings.showCertificateId)
-    });
-  } catch (error) {
-    return next(error);
-  }
-});
-
-router.post("/terminate", async (req, res, next) => {
-  try {
-    const participantId = sanitizeText(req.body.participantId, 120);
-    const examToken = sanitizeText(req.body.token, 120);
-    const reason = sanitizeText(req.body.reason, 300) || "Exam terminated due to repeated tab switching";
-    const requestedViolationCount = Number(req.body.violationCount);
-
-    if (!participantId || !examToken) {
-      return res.status(400).json({ message: "participantId and token are required" });
-    }
-
-    const clientFingerprint = buildClientFingerprint(req);
-    const participant = await getParticipantSession(participantId, examToken, clientFingerprint, true);
-
-    if (!participant) {
-      return res.status(401).json({ message: "Invalid exam session" });
-    }
-
-    const settings = await Setting.getSingleton();
-    const questionDocs = participant.assignedQuestions.filter(Boolean);
-    const totalQuestions = questionDocs.length;
-    const effectivePassingMarks = Math.min(settings.passingMarks, totalQuestions);
-
-    if (participant.submitted) {
-      return res.json({
-        message: "Exam already submitted",
-        ...buildResultPayload(participant, effectivePassingMarks, settings.showCertificateId)
-      });
-    }
-
-    const safeViolationCount = Number.isInteger(requestedViolationCount)
-      ? Math.max(1, Math.min(requestedViolationCount, MAX_TAB_SWITCH_WARNINGS))
-      : MAX_TAB_SWITCH_WARNINGS;
-
-    participant.score = 0;
-    participant.totalQuestions = totalQuestions;
-    participant.result = RESULT_STATUS.FAIL;
-    participant.answers = questionDocs.map((questionDoc) => ({
-      question: questionDoc._id,
-      selectedAnswer: null,
-      isCorrect: false
-    }));
-    participant.submitted = true;
-    participant.submittedAt = new Date();
-    participant.terminatedDueToViolation = true;
-    participant.violationCount = Math.max(participant.violationCount || 0, safeViolationCount);
-    participant.terminationReason = reason;
-
-    await participant.save();
-
-    return res.json({
-      message: "Exam terminated due to policy violation",
       ...buildResultPayload(participant, effectivePassingMarks, settings.showCertificateId)
     });
   } catch (error) {
