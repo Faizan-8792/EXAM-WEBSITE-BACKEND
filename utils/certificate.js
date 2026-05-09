@@ -1,7 +1,20 @@
 const fs = require("fs");
 const path = require("path");
+const { execFile } = require("child_process");
+const { promisify } = require("util");
 
-process.env.PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || path.join(__dirname, "..", ".cache", "puppeteer");
+const execFileAsync = promisify(execFile);
+const backendRoot = path.join(__dirname, "..");
+const getDefaultPuppeteerCacheDir = () => {
+  const homeDirectory = process.env.HOME || process.env.USERPROFILE;
+  if (homeDirectory) {
+    return path.join(homeDirectory, ".cache", "puppeteer");
+  }
+
+  return path.join(backendRoot, ".cache", "puppeteer");
+};
+
+process.env.PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || getDefaultPuppeteerCacheDir();
 
 const puppeteer = require("puppeteer");
 
@@ -24,6 +37,7 @@ let signatureBase64 = "";
 let signatureMimeType = "image/jpeg";
 let certificateTemplate = "";
 let browserPromise = null;
+let browserInstallPromise = null;
 let activePdfJobs = 0;
 const pdfQueue = [];
 const maxConcurrentPdfJobs = Math.max(1, Math.min(3, Number(process.env.PDF_CONCURRENCY) || 2));
@@ -60,6 +74,26 @@ const getBrowserExecutablePath = () =>
     ...browserExecutableCandidates
   ].find((candidatePath) => candidatePath && fs.existsSync(candidatePath));
 
+const installBrowser = async () => {
+  if (!browserInstallPromise) {
+    const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
+    browserInstallPromise = execFileAsync(npxCommand, ["puppeteer", "browsers", "install", "chrome"], {
+      cwd: backendRoot,
+      env: {
+        ...process.env,
+        PUPPETEER_CACHE_DIR: process.env.PUPPETEER_CACHE_DIR
+      },
+      timeout: 120000,
+      maxBuffer: 1024 * 1024 * 10
+    }).catch((error) => {
+      browserInstallPromise = null;
+      throw error;
+    });
+  }
+
+  return browserInstallPromise;
+};
+
 const getPuppeteerLaunchOptions = () => {
   const executablePath = getBrowserExecutablePath();
   const launchOptions = {
@@ -72,6 +106,31 @@ const getPuppeteerLaunchOptions = () => {
   }
 
   return launchOptions;
+};
+
+const getCertificateBrowserError = (error) => {
+  const message = error?.message || "Unknown browser error";
+  const executablePath = getBrowserExecutablePath() || "not found";
+  return new Error(
+    `Certificate browser failed: ${message}. PUPPETEER_CACHE_DIR=${process.env.PUPPETEER_CACHE_DIR}; executablePath=${executablePath}`
+  );
+};
+
+const launchBrowser = async () => {
+  if (!getBrowserExecutablePath()) {
+    await installBrowser();
+  }
+
+  try {
+    return await puppeteer.launch(getPuppeteerLaunchOptions());
+  } catch (error) {
+    if (/could not find chrome/i.test(error.message || "")) {
+      await installBrowser();
+      return puppeteer.launch(getPuppeteerLaunchOptions());
+    }
+
+    throw error;
+  }
 };
 
 const getImageMimeType = (filePath = "") => {
@@ -104,8 +163,7 @@ if (fs.existsSync(certificateTemplatePath)) {
 
 const getBrowser = () => {
   if (!browserPromise) {
-    browserPromise = puppeteer
-      .launch(getPuppeteerLaunchOptions())
+    browserPromise = launchBrowser()
       .then((browser) => {
         browser.on("disconnected", () => {
           browserPromise = null;
@@ -115,12 +173,7 @@ const getBrowser = () => {
       })
       .catch((error) => {
         browserPromise = null;
-        if (/could not find chrome/i.test(error.message || "")) {
-          throw new Error(
-            "Could not find Chrome for certificate generation. Redeploy the backend so postinstall can run: npm exec puppeteer browsers install chrome"
-          );
-        }
-        throw error;
+        throw getCertificateBrowserError(error);
       });
   }
 

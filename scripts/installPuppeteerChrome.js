@@ -1,6 +1,9 @@
 const { execFileSync } = require("child_process");
+const path = require("path");
 
 const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
+const cacheDirectory = process.env.PUPPETEER_CACHE_DIR ||
+  path.join(process.env.HOME || process.env.USERPROFILE || process.cwd(), ".cache", "puppeteer");
 
 try {
   execFileSync(npxCommand, ["puppeteer", "browsers", "install", "chrome"], {
@@ -8,7 +11,7 @@ try {
     stdio: "inherit",
     env: {
       ...process.env,
-      PUPPETEER_CACHE_DIR: process.env.PUPPETEER_CACHE_DIR || `${process.cwd()}/.cache/puppeteer`
+      PUPPETEER_CACHE_DIR: cacheDirectory
     }
   });
 } catch (error) {
