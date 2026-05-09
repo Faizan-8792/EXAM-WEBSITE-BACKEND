@@ -74,10 +74,24 @@ const getBrowserExecutablePath = () =>
     ...browserExecutableCandidates
   ].find((candidatePath) => candidatePath && fs.existsSync(candidatePath));
 
+const getPuppeteerCliPath = () => {
+  const packageRoot = path.dirname(require.resolve("puppeteer/package.json"));
+  const cliCandidates = [
+    path.join(packageRoot, "lib", "cjs", "puppeteer", "node", "cli.js"),
+    path.join(packageRoot, "lib", "esm", "puppeteer", "node", "cli.js")
+  ];
+
+  return cliCandidates.find((candidatePath) => fs.existsSync(candidatePath));
+};
+
 const installBrowser = async () => {
   if (!browserInstallPromise) {
-    const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
-    browserInstallPromise = execFileAsync(npxCommand, ["puppeteer", "browsers", "install", "chrome"], {
+    const puppeteerCliPath = getPuppeteerCliPath();
+    if (!puppeteerCliPath) {
+      throw new Error("Puppeteer CLI file was not found in node_modules.");
+    }
+
+    browserInstallPromise = execFileAsync(process.execPath, [puppeteerCliPath, "browsers", "install", "chrome"], {
       cwd: backendRoot,
       env: {
         ...process.env,
