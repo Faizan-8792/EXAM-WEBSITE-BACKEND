@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const { supabaseRequest } = require("../utils/supabaseClient");
 
 const TABLE = "exam_links";
+const PARTICIPANTS_TABLE = "participants";
 const LINK_TTL_MINUTES = 90;
 
 const generateCode = () => {
@@ -92,6 +93,16 @@ const findAll = async () => {
 };
 
 const deleteMany = async () => {
+  await supabaseRequest(PARTICIPANTS_TABLE, {
+    method: "PATCH",
+    query: {
+      exam_link_id: "not.is.null"
+    },
+    body: {
+      exam_link_id: null
+    }
+  });
+
   const rows = await supabaseRequest(TABLE, {
     method: "DELETE",
     query: {
