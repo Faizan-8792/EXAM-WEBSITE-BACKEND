@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+.git
+.gitignore
+.cache
+.puppeteer-cache
+coverage
+.DS_Store
+*.log
