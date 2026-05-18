@@ -176,16 +176,6 @@ const isOneWordAnswerCorrect = (selectedAnswer, correctText) => {
   return Boolean(normalizedSelected && normalizedCorrect && normalizedSelected === normalizedCorrect);
 };
 
-const getValidExamLink = async (code) => {
-  const examLink = await ExamLink.findByCode(code);
-
-  if (!examLink || ExamLink.isExpired(examLink)) {
-    return null;
-  }
-
-  return examLink;
-};
-
 const buildParticipantStartResponse = (participant, questions, remainingSeconds, examCode) => ({
   message: "Exam started successfully",
   participantId: participant._id,
@@ -231,12 +221,17 @@ router.get("/link/:code", async (req, res, next) => {
     }
 
     const expired = ExamLink.isExpired(examLink);
+    const notStartedYet = ExamLink.isNotStartedYet(examLink);
+    const secsUntilStart = ExamLink.secondsUntilStart(examLink);
 
     return res.json({
-      valid: !expired,
+      valid: !expired && !notStartedYet,
       expired,
+      notStartedYet,
+      secondsUntilStart: secsUntilStart,
       neverExpires: false,
       code: examLink.code,
+      startTime: examLink.startTime,
       expiresAt: examLink.expiresAt
     });
   } catch (error) {
@@ -294,6 +289,15 @@ router.post("/start", async (req, res, next) => {
         examToken: existingForDetails.examToken,
         examCode: examLink.code,
         result: buildResultPayload(existingForDetails, effectivePassingMarks, settings.showCertificateId)
+      });
+    }
+
+    if (ExamLink.isNotStartedYet(examLink)) {
+      return res.status(403).json({
+        message: "Exam has not started yet",
+        notStartedYet: true,
+        secondsUntilStart: ExamLink.secondsUntilStart(examLink),
+        startTime: examLink.startTime
       });
     }
 

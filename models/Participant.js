@@ -5,11 +5,9 @@ const { supabaseRequest } = require("../utils/supabaseClient");
 const TABLE = "participants";
 
 const toIsoString = (value) => {
-  if (!value) {
-    return null;
-  }
-
-  return new Date(value).toISOString();
+  if (!value) return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d.toISOString();
 };
 
 const mapAnswerFromDb = (answer = {}) => ({

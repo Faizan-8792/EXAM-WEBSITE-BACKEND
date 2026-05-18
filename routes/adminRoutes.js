@@ -377,8 +377,36 @@ router.put("/settings", verifyAdmin, async (req, res, next) => {
 
 router.post("/exam-links", verifyAdmin, async (req, res, next) => {
   try {
+    const startTime = req.body.startTime ? String(req.body.startTime).trim() : null;
+    const endTime = req.body.endTime ? String(req.body.endTime).trim() : null;
+
+    if (!endTime) {
+      return res.status(400).json({ message: "End time is required" });
+    }
+
+    const endDate = new Date(endTime);
+    if (isNaN(endDate.getTime())) {
+      return res.status(400).json({ message: "Invalid end time format" });
+    }
+
+    if (endDate.getTime() <= Date.now()) {
+      return res.status(400).json({ message: "End time must be in the future" });
+    }
+
+    if (startTime) {
+      const startDate = new Date(startTime);
+      if (isNaN(startDate.getTime())) {
+        return res.status(400).json({ message: "Invalid start time format" });
+      }
+      if (startDate >= endDate) {
+        return res.status(400).json({ message: "Start time must be before end time" });
+      }
+    }
+
     const examLink = await ExamLink.create({
-      createdByEmail: req.admin.email
+      createdByEmail: req.admin.email,
+      startTime,
+      endTime
     });
     const frontendBaseUrl = getFrontendBaseUrl(req);
 
@@ -387,8 +415,8 @@ router.post("/exam-links", verifyAdmin, async (req, res, next) => {
       code: examLink.code,
       url: `${frontendBaseUrl}/exam-link/${encodeURIComponent(examLink.code)}`,
       neverExpires: false,
-      expiresAt: examLink.expiresAt,
-      expiresInMinutes: ExamLink.LINK_TTL_MINUTES
+      startTime: examLink.startTime,
+      expiresAt: examLink.expiresAt
     });
   } catch (error) {
     return next(error);
@@ -406,16 +434,23 @@ router.get("/exam-links", verifyAdmin, async (req, res, next) => {
     return res.json(
       examLinks.map((examLink) => {
         const expired = ExamLink.isExpired(examLink);
+        const notStarted = ExamLink.isNotStartedYet(examLink);
+        let status = "Expired";
+        if (examLink.active && !expired) {
+          status = notStarted ? "Scheduled" : "Active";
+        }
 
         return {
           id: examLink._id,
           code: examLink.code,
           url: `${frontendBaseUrl}/exam-link/${encodeURIComponent(examLink.code)}`,
           createdAt: examLink.createdAt,
+          startTime: examLink.startTime,
           expiresAt: examLink.expiresAt,
           active: Boolean(examLink.active),
           expired,
-          status: examLink.active && !expired ? "Active" : "Expired",
+          notStarted,
+          status,
           neverExpires: false,
           usedCount: usageCounts[examLink._id] || 0
         };
