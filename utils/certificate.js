@@ -2,19 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const { execFile } = require("child_process");
 const { promisify } = require("util");
+const { backendRoot, getDefaultCacheDir, getPuppeteerCliPath } = require("./puppeteerPaths");
 
 const execFileAsync = promisify(execFile);
-const backendRoot = path.join(__dirname, "..");
-const getDefaultPuppeteerCacheDir = () => {
-  const homeDirectory = process.env.HOME || process.env.USERPROFILE;
-  if (homeDirectory) {
-    return path.join(homeDirectory, ".cache", "puppeteer");
-  }
 
-  return path.join(backendRoot, ".cache", "puppeteer");
-};
-
-process.env.PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || getDefaultPuppeteerCacheDir();
+process.env.PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || getDefaultCacheDir();
 
 const puppeteer = require("puppeteer");
 
@@ -73,16 +65,6 @@ const getBrowserExecutablePath = () =>
     getBundledBrowserExecutablePath(),
     ...browserExecutableCandidates
   ].find((candidatePath) => candidatePath && fs.existsSync(candidatePath));
-
-const getPuppeteerCliPath = () => {
-  const packageRoot = path.dirname(require.resolve("puppeteer/package.json"));
-  const cliCandidates = [
-    path.join(packageRoot, "lib", "cjs", "puppeteer", "node", "cli.js"),
-    path.join(packageRoot, "lib", "esm", "puppeteer", "node", "cli.js")
-  ];
-
-  return cliCandidates.find((candidatePath) => fs.existsSync(candidatePath));
-};
 
 const installBrowser = async () => {
   if (!browserInstallPromise) {
