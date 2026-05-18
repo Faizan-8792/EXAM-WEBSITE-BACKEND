@@ -8,45 +8,12 @@ const cookieParser = require("cookie-parser");
 const examRoutes = require("./routes/examRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const { getDbStatus, requireDbConnection } = require("./utils/db");
+const { isAllowedOrigin } = require("./utils/origins");
 
 const app = express();
 
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
-
-const DEFAULT_ALLOWED_ORIGINS = ["https://narayanagroupexamportal.netlify.app"];
-
-const parseAllowedOrigins = () => {
-  const rawOrigins = process.env.ALLOWED_ORIGINS || process.env.FRONTEND_ORIGIN || DEFAULT_ALLOWED_ORIGINS.join(",");
-
-  return rawOrigins
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean)
-    .map((origin) => {
-      try {
-        return new URL(origin).origin;
-      } catch (error) {
-        return null;
-      }
-    })
-    .filter(Boolean);
-};
-
-const ALLOWED_ORIGINS = parseAllowedOrigins();
-
-const isOriginAllowed = (origin) => {
-  if (!origin) {
-    return false;
-  }
-
-  try {
-    const normalizedOrigin = new URL(origin).origin;
-    return ALLOWED_ORIGINS.includes(normalizedOrigin);
-  } catch (error) {
-    return false;
-  }
-};
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -73,7 +40,7 @@ app.use((req, res, next) => {
     return next();
   }
 
-  if (!isOriginAllowed(origin)) {
+  if (!isAllowedOrigin(origin)) {
     if (req.method === "OPTIONS") {
       return res.status(403).json({ message: "Origin not allowed" });
     }

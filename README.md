@@ -1,9 +1,10 @@
-# Backend (Vercel)
+# Backend (Azure VM)
 
 This folder contains the API-only backend for the Narayana Exam System.
 
 ## Deploy target
-- Platform: Vercel
+- Platform: Azure VM (Central India)
+- Public URL: `https://examwebsitebackend.centralindia.cloudapp.azure.com`
 - Entrypoint: `api/index.js`
 
 ## Local run

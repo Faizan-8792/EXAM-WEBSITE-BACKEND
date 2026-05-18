@@ -15,42 +15,9 @@ const {
 } = require("../middleware/adminAuth");
 const { sanitizeMultilineText, sanitizeOptions, sanitizeText, isValidObjectId } = require("../utils/sanitizers");
 const { buildParticipantsWorkbook } = require("../utils/excelExport");
+const { isAllowedOrigin } = require("../utils/origins");
 
 const router = express.Router();
-
-const DEFAULT_ALLOWED_ORIGINS = ["https://narayanagroupexamportal.netlify.app"];
-
-const parseAllowedOrigins = () => {
-  const rawOrigins = process.env.ALLOWED_ORIGINS || process.env.FRONTEND_ORIGIN || DEFAULT_ALLOWED_ORIGINS.join(",");
-
-  return rawOrigins
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean)
-    .map((origin) => {
-      try {
-        return new URL(origin).origin;
-      } catch (error) {
-        return null;
-      }
-    })
-    .filter(Boolean);
-};
-
-const ALLOWED_ORIGINS = parseAllowedOrigins();
-
-const isAllowedOrigin = (originHeader) => {
-  if (!originHeader) {
-    return false;
-  }
-
-  try {
-    const normalizedOrigin = new URL(originHeader).origin;
-    return ALLOWED_ORIGINS.includes(normalizedOrigin);
-  } catch (error) {
-    return false;
-  }
-};
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
