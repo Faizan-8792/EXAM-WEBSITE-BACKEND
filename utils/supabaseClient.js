@@ -102,6 +102,12 @@ const supabaseRequest = async (tablePath, options = {}) => {
     throw error;
   }
 
+  // Supabase returns null body for empty result sets (e.g. DELETE with no rows).
+  // Normalise to an empty array so all callers can safely use Array.isArray / [0].
+  if (payload === null || payload === undefined) {
+    return [];
+  }
+
   return payload;
 };
 

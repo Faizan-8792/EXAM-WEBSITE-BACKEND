@@ -530,10 +530,7 @@ router.put("/questions/:id", verifyAdmin, async (req, res, next) => {
       });
     }
 
-    const updatedQuestion = await Question.findByIdAndUpdate(questionId, payload, {
-      new: true,
-      runValidators: true
-    });
+    const updatedQuestion = await Question.findByIdAndUpdate(questionId, payload);
 
     if (!updatedQuestion) {
       return res.status(404).json({ message: "Question not found" });

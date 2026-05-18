@@ -17,6 +17,7 @@ const {
   buildResultPayload
 } = require("../utils/examHelpers");
 const { generateCertificatePdf } = require("../utils/certificate");
+const { supabaseRequest } = require("../utils/supabaseClient");
 
 const router = express.Router();
 const COMPLETED_ATTEMPT_MESSAGE = "You have already completed this exam. Re-appear is not allowed.";
@@ -418,11 +419,31 @@ router.get("/state", async (req, res, next) => {
       participant.examDurationSeconds
     );
 
+    // Fetch the global exam link expiry so the client can enforce the hard deadline
+    let linkExpiresAt = null;
+    if (participant.examLinkId) {
+      try {
+        const rows = await supabaseRequest("exam_links", {
+          query: {
+            select: "expires_at",
+            id: `eq.${participant.examLinkId}`,
+            limit: "1"
+          }
+        });
+        if (rows[0] && rows[0].expires_at) {
+          linkExpiresAt = rows[0].expires_at;
+        }
+      } catch (_) {
+        // non-critical — client falls back to per-participant timer only
+      }
+    }
+
     return res.json({
       submitted: false,
       participantId: participant._id,
       totalQuestions: participant.totalQuestions,
       remainingSeconds,
+      expiresAt: linkExpiresAt,
       questions: mapQuestionsForExam(participant.assignedQuestions, participant.optionOrder),
       timeUp: remainingSeconds <= 0
     });
