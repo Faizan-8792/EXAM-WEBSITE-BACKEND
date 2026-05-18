@@ -316,14 +316,15 @@ router.post("/start", async (req, res, next) => {
         existingParticipant.examDurationSeconds
       );
 
-      return res.json(
-        buildParticipantStartResponse(
+      return res.json({
+        ...buildParticipantStartResponse(
           existingParticipant,
           existingParticipant.assignedQuestions,
           remainingSeconds,
           examLink.code
-        )
-      );
+        ),
+        linkExpiresAt: examLink.expiresAt || null
+      });
     }
 
     const newAttemptErrors = getNewAttemptValidationErrors(payload);
@@ -377,6 +378,7 @@ router.post("/start", async (req, res, next) => {
       totalQuestions,
       remainingSeconds: examDurationSeconds,
       expiresAt: new Date(startedAt.getTime() + examDurationSeconds * 1000),
+      linkExpiresAt: examLink.expiresAt || null,
       examCode: examLink.code,
       questions: mapQuestionsForExam(selectedQuestions, optionOrder)
     });
