@@ -16,7 +16,7 @@ const startServer = async () => {
     console.error(`Database connection unavailable: ${error.message}`);
   });
 
-  const shutdown = async (signal) => {
+  const shutdown = (signal) => {
     console.log(`Received ${signal}. Shutting down gracefully...`);
 
     server.close(() => {

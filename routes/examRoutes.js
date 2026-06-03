@@ -18,6 +18,7 @@ const {
 } = require("../utils/examHelpers");
 const { generateCertificatePdf } = require("../utils/certificate");
 const { supabaseRequest } = require("../utils/supabaseClient");
+const { shuffle } = require("../utils/shuffle");
 
 const router = express.Router();
 const COMPLETED_ATTEMPT_MESSAGE = "You have already completed this exam. Re-appear is not allowed.";
@@ -44,21 +45,10 @@ const buildClientFingerprint = (req) => {
   return crypto.createHash("sha256").update(`${userAgent}|${clientId}`).digest("hex");
 };
 
-const shuffleValues = (items) => {
-  const values = [...items];
-
-  for (let index = values.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [values[index], values[randomIndex]] = [values[randomIndex], values[index]];
-  }
-
-  return values;
-};
-
 const buildOptionOrderForQuestions = (questions = []) =>
   questions.reduce((orderByQuestion, question) => {
     if (question.questionType !== Question.QUESTION_TYPES.ONE_WORD) {
-      orderByQuestion[String(question._id)] = shuffleValues([0, 1, 2, 3]);
+      orderByQuestion[String(question._id)] = shuffle([0, 1, 2, 3]);
     }
     return orderByQuestion;
   }, {});
@@ -447,8 +437,83 @@ router.get("/state", async (req, res, next) => {
       remainingSeconds,
       expiresAt: linkExpiresAt,
       questions: mapQuestionsForExam(participant.assignedQuestions, participant.optionOrder),
+      progressAnswers:
+        participant.progressAnswers && typeof participant.progressAnswers === "object"
+          ? participant.progressAnswers
+          : {},
+      currentQuestionIndex: Number.isInteger(participant.currentQuestionIndex)
+        ? participant.currentQuestionIndex
+        : 0,
       timeUp: remainingSeconds <= 0
     });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.post("/progress", async (req, res, next) => {
+  try {
+    const participantId = sanitizeText(req.body.participantId, 120);
+    const examToken = sanitizeText(req.body.token, 120);
+
+    if (!participantId || !examToken) {
+      return res.status(400).json({ message: "participantId and token are required" });
+    }
+
+    const clientFingerprint = buildClientFingerprint(req);
+    const participant = await getParticipantSession(participantId, examToken, clientFingerprint);
+
+    if (!participant) {
+      return res.status(401).json({ message: "Invalid exam session" });
+    }
+
+    // Already-submitted exams are immutable; ignore late autosaves silently.
+    if (participant.submitted) {
+      return res.json({ saved: false, submitted: true });
+    }
+
+    const rawAnswers =
+      req.body.answers && typeof req.body.answers === "object" && !Array.isArray(req.body.answers)
+        ? req.body.answers
+        : {};
+
+    // Only persist answers for questions actually assigned to this participant,
+    // and bound the stored value sizes to avoid abuse.
+    const assignedIds = new Set(
+      (participant.assignedQuestions || []).map((question) => String(question?._id || question?.id || question))
+    );
+
+    const progressAnswers = {};
+    Object.entries(rawAnswers).forEach(([questionId, value]) => {
+      const key = String(questionId);
+      if (!assignedIds.size || assignedIds.has(key)) {
+        if (typeof value === "number" && Number.isFinite(value)) {
+          progressAnswers[key] = value;
+        } else if (typeof value === "string") {
+          progressAnswers[key] = value.slice(0, 200);
+        }
+      }
+    });
+
+    const parsedIndex = Number(req.body.currentQuestionIndex);
+    const totalAssigned = participant.assignedQuestions ? participant.assignedQuestions.length : 0;
+    const currentQuestionIndex =
+      Number.isInteger(parsedIndex) && parsedIndex >= 0 && (!totalAssigned || parsedIndex < totalAssigned)
+        ? parsedIndex
+        : 0;
+
+    try {
+      await Participant.updateProgress(participant._id, {
+        progressAnswers,
+        currentQuestionIndex
+      });
+    } catch (progressError) {
+      // Progress persistence is best-effort. If the DB columns are not present
+      // yet (migration pending) the client still has localStorage as a fallback.
+      return res.json({ saved: false });
+    }
+
+    return res.json({ saved: true });
   } catch (error) {
     return next(error);
   }

@@ -53,6 +53,8 @@ create table if not exists public.participants (
   assigned_question_ids jsonb not null default '[]'::jsonb check (jsonb_typeof(assigned_question_ids) = 'array'),
   option_order jsonb not null default '{}'::jsonb check (jsonb_typeof(option_order) = 'object'),
   answers jsonb not null default '[]'::jsonb check (jsonb_typeof(answers) = 'array'),
+  progress_answers jsonb not null default '{}'::jsonb check (jsonb_typeof(progress_answers) = 'object'),
+  current_question_index integer not null default 0 check (current_question_index >= 0),
   submitted boolean not null default false,
   submitted_at timestamptz,
   violation_count integer not null default 0 check (violation_count >= 0),

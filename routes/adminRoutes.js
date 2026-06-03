@@ -449,6 +449,26 @@ router.delete("/exam-links", verifyAdmin, async (req, res, next) => {
   }
 });
 
+router.delete("/exam-links/:id", verifyAdmin, async (req, res, next) => {
+  try {
+    const examLinkId = sanitizeText(req.params.id, 120);
+
+    if (!isValidObjectId(examLinkId)) {
+      return res.status(400).json({ message: "Invalid exam link id" });
+    }
+
+    const deletedExamLink = await ExamLink.findByIdAndDelete(examLinkId);
+
+    if (!deletedExamLink) {
+      return res.status(404).json({ message: "Exam link not found" });
+    }
+
+    return res.json({ message: "Exam link deleted successfully" });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 router.get("/questions", verifyAdmin, async (req, res, next) => {
   try {
     const questions = await Question.find().sort({ createdAt: -1 });

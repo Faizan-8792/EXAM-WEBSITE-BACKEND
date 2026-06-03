@@ -6,7 +6,7 @@ const { backendRoot, getDefaultCacheDir, getPuppeteerCliPath } = require("./pupp
 
 const execFileAsync = promisify(execFile);
 
-process.env.PUPPETEER_CACHE_DIR = process.env.PUPPETEER_CACHE_DIR || getDefaultCacheDir();
+process.env.PUPPETEER_CACHE_DIR = getDefaultCacheDir();
 
 const puppeteer = require("puppeteer");
 

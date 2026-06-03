@@ -114,6 +114,14 @@ class ParticipantDocument {
     this.assignedQuestions = Array.isArray(row.assigned_question_ids) ? row.assigned_question_ids : [];
     this.optionOrder = row.option_order && typeof row.option_order === "object" ? row.option_order : {};
     this.answers = Array.isArray(row.answers) ? row.answers.map(mapAnswerFromDb) : [];
+    this.progressAnswers =
+      row.progress_answers && typeof row.progress_answers === "object" && !Array.isArray(row.progress_answers)
+        ? row.progress_answers
+        : {};
+    this.currentQuestionIndex =
+      Number.isInteger(row.current_question_index) && row.current_question_index >= 0
+        ? row.current_question_index
+        : 0;
     this.submitted = Boolean(row.submitted);
     this.submittedAt = row.submitted_at;
     this.violationCount = Number(row.violation_count) || 0;
@@ -333,6 +341,42 @@ const findByIdAndDelete = async (id) => {
   return rows[0] ? new ParticipantDocument(rows[0]) : null;
 };
 
+/**
+ * Persist in-progress exam state (ungraded answers + current question index)
+ * without touching graded fields. Patches only the two progress columns so a
+ * full participant save is never required for an autosave.
+ */
+const updateProgress = async (id, { progressAnswers, currentQuestionIndex } = {}) => {
+  if (!id) {
+    return null;
+  }
+
+  const body = {};
+
+  if (progressAnswers && typeof progressAnswers === "object" && !Array.isArray(progressAnswers)) {
+    body.progress_answers = progressAnswers;
+  }
+
+  if (Number.isInteger(currentQuestionIndex) && currentQuestionIndex >= 0) {
+    body.current_question_index = currentQuestionIndex;
+  }
+
+  if (!Object.keys(body).length) {
+    return null;
+  }
+
+  const rows = await supabaseRequest(TABLE, {
+    method: "PATCH",
+    query: {
+      id: `eq.${id}`
+    },
+    body,
+    prefer: "return=representation"
+  });
+
+  return rows[0] ? new ParticipantDocument(rows[0]) : null;
+};
+
 module.exports = {
   create,
   findById,
@@ -341,5 +385,6 @@ module.exports = {
   find,
   deleteMany,
   findByIdAndDelete,
+  updateProgress,
   RESULT_STATUS
 };

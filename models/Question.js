@@ -1,4 +1,5 @@
 const { supabaseRequest } = require("../utils/supabaseClient");
+const { shuffle } = require("../utils/shuffle");
 
 const TABLE = "questions";
 const QUESTION_TYPES = {
@@ -68,17 +69,6 @@ class QuestionQuery {
     return this.exec().catch(reject);
   }
 }
-
-const shuffle = (items) => {
-  const values = [...items];
-
-  for (let index = values.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [values[index], values[randomIndex]] = [values[randomIndex], values[index]];
-  }
-
-  return values;
-};
 
 const find = () =>
   new QuestionQuery(() =>

@@ -9,7 +9,9 @@ const backendRoot = path.join(__dirname, "..");
  */
 const getDefaultCacheDir = () => {
   if (process.env.PUPPETEER_CACHE_DIR) {
-    return process.env.PUPPETEER_CACHE_DIR;
+    // Resolve relative paths (e.g. "./.cache/puppeteer") against the backend
+    // root so the install-time CWD and the PM2 runtime CWD always agree.
+    return path.resolve(backendRoot, process.env.PUPPETEER_CACHE_DIR);
   }
 
   const homeDirectory = process.env.HOME || process.env.USERPROFILE;

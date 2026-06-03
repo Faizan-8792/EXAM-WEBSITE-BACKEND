@@ -2,7 +2,11 @@
 # Azure App Service custom startup script
 # Installs Chrome dependencies required by Puppeteer for PDF certificate generation
 
-apt-get update -qq 2>/dev/null
+set -e
+
+echo "[startup] Installing Chromium runtime dependencies..."
+
+apt-get update -qq 2>/dev/null || true
 apt-get install -y --no-install-recommends \
   libglib2.0-0 \
   libnss3 \
@@ -26,7 +30,10 @@ apt-get install -y --no-install-recommends \
   libcairo2 \
   libasound2 \
   libatspi2.0-0 \
-  2>/dev/null
+  2>/dev/null || echo "[startup] Warning: some packages may have failed to install"
 
-# Start the Node.js application
-node server.js
+# Clean up apt cache to reduce container layer size
+rm -rf /var/lib/apt/lists/* 2>/dev/null || true
+
+echo "[startup] Starting Node.js application..."
+exec node server.js

@@ -145,6 +145,45 @@ const deleteMany = async () => {
   };
 };
 
+const findById = async (id) => {
+  if (!id) return null;
+
+  const rows = await supabaseRequest(TABLE, {
+    query: {
+      select: "*",
+      id: `eq.${id}`,
+      limit: "1"
+    }
+  });
+
+  return rows[0] ? mapExamLinkFromDb(rows[0]) : null;
+};
+
+const findByIdAndDelete = async (id) => {
+  if (!id) return null;
+
+  // Detach participants first so the foreign key reference does not block deletion.
+  await supabaseRequest(PARTICIPANTS_TABLE, {
+    method: "PATCH",
+    query: {
+      exam_link_id: `eq.${id}`
+    },
+    body: {
+      exam_link_id: null
+    }
+  });
+
+  const rows = await supabaseRequest(TABLE, {
+    method: "DELETE",
+    query: {
+      id: `eq.${id}`
+    },
+    prefer: "return=representation"
+  });
+
+  return rows[0] ? mapExamLinkFromDb(rows[0]) : null;
+};
+
 module.exports = {
   normalizeCode,
   isExpired,
@@ -153,5 +192,7 @@ module.exports = {
   create,
   findByCode,
   findAll,
+  findById,
+  findByIdAndDelete,
   deleteMany
 };
